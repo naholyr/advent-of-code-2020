@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <style>
+    .r {
+      padding: 0;
+      margin: 0;
+      height: 5px;
+    }
+
+    .c {
+      padding: 0;
+      margin: 0;
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+    }
+
+    .o {
+      /* occupied */
+      background-color: darkred;
+    }
+
+    .e {
+      /* empty */
+      background-color: darkblue;
+    }
+
+    .f {
+      /* floor */
+      background-color: beige;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="simulation"></div>
+  <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+  <script>
+    const interval = 0;
+
+    const h = React.createElement;
+
+    const Grid = React.memo(({ data, step }) =>
+      h(React.Fragment, {},
+        h('p', {},
+          `Step ${step} (${countOccupied(data)}/${countSeats(data)})`
+        ),
+        h('div', {},
+          data.map((row, key) => h(Row, { row, key }))
+        )
+      )
+    );
+
+    const Row = React.memo(({ row }) =>
+      h('div', { className: 'r' },
+        row.map((cell, key) => h(Cell, { cell, key }))
+      )
+    );
+
+    const cls = { '#': 'o', 'L': 'e', '.': 'f' };
+    const Cell = React.memo(({ cell }) =>
+      h('div', { className: `c ${cls[cell]}` })
+    );
+
+    const countOccupied = data =>
+      data.reduce((n, r) => r.reduce((n, c) => n + (c === '#' ? 1 : 0), n), 0);
+    const countSeats = data =>
+      data.reduce((n, r) => r.reduce((n, c) => n + (c !== '.' ? 1 : 0), n), 0);
+
+    const nextGrid = data => {
+      console.log(data.map(r => r.join('')).join('\n'));
+      let modified = false;
+      const data2 = data.map((row, index) => {
+        const row2 = nextRow(data, index);
+        if (row2 !== row) modified = true;
+        return row2;
+      });
+      return modified ? data2 : data;
+    };
+
+    const nextRow = (data, rowIndex) => {
+      let modified = false;
+      const row2 = data[rowIndex].map((cell, index) => {
+        const cell2 = nextCell(data, rowIndex, index);
+        if (cell2 !== cell) modified = true;
+        return cell2;
+      });
+      return modified ? row2 : data[rowIndex];
+    };
+
+    const nextCell = (data, rowIndex, colIndex) => {
+      const cell = data[rowIndex]?.[colIndex];
+      if (cell === 'L') { // empty
+        // check if all adjacent seats are empty => become occupied
+        if (adjacents(data, rowIndex, colIndex).every(c => c === 'L')) {
+          console.log(rowIndex, colIndex, cell, adjacents(data, rowIndex, colIndex), '→ #');
+          return '#';
+        }
+      }
+      if (cell === '#') { // occupied
+        // check if there are 4+ occupied adjacent seats => become empty
+        if (adjacents(data, rowIndex, colIndex).filter(c => c === '#').length >= 5) {
+          console.log(rowIndex, colIndex, cell, adjacents(data, rowIndex, colIndex), '→ L');
+          return 'L';
+        }
+      }
+      console.log(rowIndex, colIndex, cell, adjacents(data, rowIndex, colIndex), '=');
+      return cell;
+    };
+
+    const nextVisible = (data, rowIndex, colIndex, rowDelta, colDelta, multiplier = 1) => {
+      const cell = data[rowIndex + rowDelta * multiplier]?.[colIndex + colDelta * multiplier];
+      if (cell === undefined || cell !== '.') return cell;
+      return nextVisible(data, rowIndex, colIndex, rowDelta, colDelta, multiplier + 1);
+    }
+
+    const adjacents = (data, rowIndex, colIndex) => [
+      nextVisible(data, rowIndex, colIndex, -1, -1),
+      nextVisible(data, rowIndex, colIndex, -1, +0),
+      nextVisible(data, rowIndex, colIndex, -1, +1),
+      nextVisible(data, rowIndex, colIndex, +0, -1),
+      nextVisible(data, rowIndex, colIndex, +0, +1),
+      nextVisible(data, rowIndex, colIndex, +1, -1),
+      nextVisible(data, rowIndex, colIndex, +1, +0),
+      nextVisible(data, rowIndex, colIndex, +1, +1),
+    ].filter(c => c !== undefined && c !== '.')
+
+    const render = (data, step) => {
+      const app = h(Grid, { data, step });
+      const mountPoint = document.getElementById('simulation');
+      ReactDOM.render(app, mountPoint);
+      setTimeout(() => {
+        const data2 = nextGrid(data);
+        if (data2 !== data) {
+          render(data2, step + 1);
+        }
+      }, interval);
+    };
+
+    fetch('11-input.txt')
+      .then(res => res.text())
+      .then(text => text.split('\n').map(row => [...row]))
+      .then(data => render(data, 1));
+  </script>
+</body>
+
+</html>
