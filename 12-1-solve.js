@@ -1,5 +1,4 @@
 // Prepare
-const { count } = require("console");
 const { readFileSync } = require("fs");
 
 const r = { E: "S", S: "W", W: "N", N: "E" };

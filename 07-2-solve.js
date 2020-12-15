@@ -1,5 +1,4 @@
 // Prepare
-const { count } = require("console");
 const { readFileSync } = require("fs");
 const input = readFileSync("07-1-input.txt", "utf-8");
 
